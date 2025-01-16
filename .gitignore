@@ -1,0 +1,10 @@
+data/*
+!data/README.md
+
+sample/*
+!sample/README.md
+
+venv
+
+# local env files
+.env*.local

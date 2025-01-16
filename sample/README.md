@@ -1,0 +1,1 @@
+Directory for storing sample files provided by signate

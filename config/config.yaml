@@ -1,0 +1,6 @@
+# documents
+documents: data/documents
+
+# validation_data
+valid_documents: data/validation/documents
+valid_answer: data/validation/ans_txt.csv
