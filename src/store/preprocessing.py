@@ -334,3 +334,78 @@ def summarize_texts_with_gpt4o(
             faq_df.to_csv(output_summary_path, index=False, encoding='utf-8-sig')
 
         print(f"[INFO] 要約ファイルを作成しました: {output_summary_path}")
+
+def extract_words_with_llmchain(
+    csv_files: List[str],
+    output_file: str,
+    batch_size: int = 50
+):
+    """
+    ChatOpenAI と LLMChain を使用して、複数のCSVファイルを処理し、
+    固有名詞を抽出してJSONファイルとして保存します。
+
+    Args:
+        csv_files (List[str]): 処理するCSVファイルのパス一覧。
+        output_file (str): 抽出結果を保存するディレクトリ。
+        batch_size (int): 1回のAPI呼び出しで処理する行数。
+    """
+    load_dotenv(repo_dir.joinpath(".env.local"))
+
+    # 環境変数からAPIキーを取得
+    openai_api_key = os.environ.get("OPENAI_API_KEY", None)
+    if openai_api_key is None:
+        raise ValueError("OPENAI_API_KEY is not set in .env.local")
+    
+    # ChatGPT モデルを設定
+    llm = ChatOpenAI(
+        model="gpt-4o-mini",
+        openai_api_key=openai_api_key,
+        temperature=0,
+    )
+
+    system_prompt = ChatPromptTemplate.from_messages([
+        (
+            "system",
+            """あなたはテキストをチェックする専門家です。
+            以下のテキストから企業名、企業に関連する商品のジャンルのみを抽出してください。
+            それ以外の、国名、地名、施設名、人名、役職、サービス名と思われるものや、普遍的な単語、名詞等は回答に含めないでください。
+            結果は一つのリスト形式で列挙してください。
+            フォーマット: [\"固有名詞1\", \"固有名詞2\", ...]"""
+        ),
+        ("user", "{text}") 
+    ])
+
+    llm_chain = LLMChain(
+        prompt=system_prompt,
+        llm=llm
+    )
+
+    all_results = {}
+
+    for csv_file in csv_files:
+        df = pd.read_csv(csv_file)
+
+        file_key = os.path.basename(csv_file)
+
+        all_entities = []
+        questions = df["faq_question"].dropna().tolist()
+        for i in range(0, len(questions), batch_size):
+            batch = questions[i:i + batch_size]
+            batch_text = "\n".join(batch)
+
+            try:
+                response = llm_chain.run({"text": batch_text})
+
+                entities = json.loads(response)
+                all_entities.extend(entities)
+
+            except Exception as e:
+                print(f"[ERROR] ファイル {csv_file} のバッチ処理中にエラー: {e}")
+                continue
+
+        all_results[file_key] = list(set(all_entities))
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(all_results, f, ensure_ascii=False, indent=4)
+
+    print(f"抽出結果を {output_file} に保存しました。")

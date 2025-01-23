@@ -1,3 +1,4 @@
 from .utils import load_pdfs, load_pdfs_use_pypdfium2
-from .preprocessing import format_texts_with_gpt4o, summarize_formatted_texts_with_gpt4o, summarize_texts_with_gpt4o
+from .preprocessing import format_texts_with_gpt4o, summarize_formatted_texts_with_gpt4o, summarize_texts_with_gpt4o, extract_words_with_llmchain
 from .vectorize import vectorize_faqs_from_csv
+from .faq_vectorize import process_and_build_json_vector_store, build_bi_vector_stores
